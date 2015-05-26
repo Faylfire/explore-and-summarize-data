@@ -1,0 +1,56 @@
+---
+title: "Project 3 Data Science NanoDegree "
+author: "Fang Lu"
+date: "Monday, May 25, 2015"
+output: html_document
+
+---
+
+ 
+**Note:** This is currently a placeholder for my Project 3, I will be completing this project within 48 hours of submission (end of day May 27, 2015), Please keep me with my current Decemeber cohort. I have gotten somewhat behind on project 3, but should have no issues completing the rest of the projects with my cohort. Thank you for your consideration.
+
+
+
+###1. Injestion and Familiarization of the Data
+
+This is an exploration of a tidy data set provided by Udacity Data Science Nanodegree for Project 3.
+
+```{r}
+summary(cars)
+```
+
+You can also embed plots, for example:
+
+```{r, echo=FALSE}
+plot(cars)
+```
+
+###2. Free Exploration
+
+```{r}
+summary(cars)
+```
+
+
+###3. Further Exploration
+
+```{r}
+summary(cars)
+```
+
+
+###4: Final Plots and Summary
+
+```{r}
+plot(cars)
+```
+
+###5: Reflection
+
+Relections are what we see in mirrors.
+
+```{r}
+summary(cars)
+```
+
+
