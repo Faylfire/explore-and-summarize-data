@@ -1,56 +1,485 @@
 ---
 title: "Project 3 Data Science NanoDegree "
 author: "Fang Lu"
-date: "Monday, May 25, 2015"
+date: "Thursday, May 30, 2015"
 output: html_document
 
 ---
 
- 
-**Note:** This is currently a placeholder for my Project 3, I will be completing this project within 48 hours of submission (end of day May 27, 2015), Please keep me with my current Decemeber cohort. I have gotten somewhat behind on project 3, but should have no issues completing the rest of the projects with my cohort. Thank you for your consideration.
-
-
 
 ###1. Injestion and Familiarization of the Data
 
-This is an exploration of a tidy data set provided by Udacity Data Science Nanodegree for Project 3.
+This is an exploration of the tidy data set **wineQualityReds.csv** provided by Udacity Data Analyst Nanodegree for Project 3. This data set was chosen for the brevity of the observations in consideration for execution time of certain plots. Guiding question: "Which Variables affect Red Wine Quality?"
+
+```{r, include=FALSE}
+#getwd()
+#setwd('C:/Fang Lu/Udacity/Data Science/EDA_Course_Materials/EDA_Course_Materials/Project3')
+#Read in Wine Quality Reds as wqr and run all necessary libraries
+library(ggplot2)
+library(GGally)
+library(gridExtra)
+library(reshape)
+library(scales)
+library(memisc)
+library(RColorBrewer)
+wqr <- read.csv('wineQualityReds.csv')
+
+```
+
+*Initial Explorations:*
+
+```{r Summaries}
+names(wqr)
+str(wqr)
+summary(wqr)
+```
+Some parameter names may be a bit long to plot on ggpairs, perhaps a renaming of the parameters will be needed later. There are 1599 observations of red wine in the dataset (rather small considering other datasets). Alcohol content of red wines range from 8.40% to 14.90% with most around 10%. The quality rating of reds in this data set are mostly between 5 and 6 with median at 6. pH of reds are stable around 3-4, 
+
+###2. Free Exploration and Transformation
+
+```{r Early Exploration}
+#Added jitter and some transparency to the basic plot
+ggplot(aes(x = quality, y = fixed.acidity), data = wqr) + geom_point(alpha = 1/4, position = 'jitter')
+
+```
+
+It seems that fixed acidity has little to do with the quality of red wines, and that there are more quality 5 to 7 wines than there qualities of other types, this is also noted in the readme *wineQualityInfo.txt*. Perhaps it would be better to combine the bottom two levels and the top two levels.
+
+```{r Histograms, message=FALSE}
+#Early Histogram Generation to get an idea of the distribution of some of the parameters
+h1 <- ggplot(aes(x=fixed.acidity), data = wqr)+ geom_histogram(binwidth = .25)
+h2 <- ggplot(aes(x=sqrt(volatile.acidity)), data = wqr)+ geom_histogram(binwidth = .05)
+grid.arrange(h1, h2, ncol = 2)
+
+#Using Reshape2 to melt the data together to generate a histogram gridplot for an overview
+meltwqr <- melt(wqr, id = c('X'))
+gridHist <- ggplot(aes(x=value), data=meltwqr) + geom_histogram()+facet_wrap(~variable, ncol = 4, scale='free_x', shrink=TRUE)
+gridHist
+
+```
+The histogram grid took some research to create (at first attempted a function that did not work as intened). This provided a good overview of the distribution of the different chemical attributes, residual.sugar and chlorides and perhaps sulphates could possibly use a closer look at the X-scaling for they seem to be more long-tailed. An extra note, density seems to be rather normally distributed.
+
+```{r Scatter Plots, message=FALSE}
+#created a second transformation of the data using melt from reshape2 library to get a scatter plot of all the input variables vs quality
+scattwqr <- melt(wqr, id = c('X','quality'))
+gridScatt <- ggplot(aes(x=quality, y = value), data = scattwqr) + geom_point(alpha = 1/4, position= "jitter", size=0.5)+facet_wrap(~variable, ncol=4, scale='free_y')
+gridScatt
+
+```
+From the scatter plots, sulphates, alcohol content seems to have a bit of correlation with quality where higher alcohol content seems to indicate higher quality, but the variance is still pretty high.
+
+```{r boxplots, message=FALSE}
+#Boxplots for graphical statistical summary of all the input variables vs quality
+gridBox <- ggplot(aes(x=factor(quality), y = value), data = scattwqr) + geom_boxplot()+facet_wrap(~variable, ncol=4, scale='free_y')
+gridBox
+```
+
+The boxplots seem to reveal some interesting trends where the other plots showed relatively little. A re-scaling of the Y-axis for residual.sugar, chlorides, and sulphates might reveal a better view of the boxplots.
+
+```{r Detailed Summaries, message=FALSE}
+
+#with(wqr, cor.test(quality, citric.acid, method = 'pearson'))
+#with(wqr, cor.test(quality, volatile.acidity, method = 'pearson'))
+#with(wqr, cor.test(quality, fixed.acidity, method = 'pearson'))
+#with(wqr, cor.test(quality, alcohol, method = 'pearson'))
+#with(wqr, cor.test(quality, sulphates, method = 'pearson'))
+#with(wqr, cor.test(quality, chlorides, method = 'pearson'))
+#with(wqr, cor.test(density, alcohol, method = 'pearson'))
+#with(wqr, cor.test(density, quality, method = 'pearson'))
+with(wqr, cor.test(quality, fixed.acidity, method = 'pearson'))
+#No need to sample since our dataset is relatively small
+#create a new dataframe with condensed naming for ggpairs
+newnames = c('X', "f.acid",'v.acid','c.acid','r.sugar', 'clrides', 'f.s.dioxide','total.s.d', 'density','pH','sulphates','alcohol','quality')
+wqrRen <- wqr
+colnames(wqrRen) <- newnames
+#ggpairs(wqrRen[3:13], params = c(shape = I('.'), outlier.shape = I('.')))
+
+ggpairs(wqrRen[3:13], upper = list(params = c(size = 4)), lower = list(continuous = "smooth"))
+
+#Some sanity checks
+
+with(wqr, cor.test(fixed.acidity, pH))
+
+```
+A sanity check with *fixed.acidity* vs *pH* shows that as expected there is a reasonably high correlation (-0.68) between *fixed.acidity* and *pH*. Looking at the correlation coefficients, it seems that *'alcohol'*, *'volatile.acidity'*, *'sulphates'*, and *'citric.acid'* have four highest correlation with *'quality'*, respectively. *'total.sulfur.dioxid'* along with a couple of other input variables are close, with *'pH'*, *'residual.sugar'* and *'free.sulfur.dioxide'* seemingly uncorrelated with *'quality'*.
+
+**Citric Acid**
+```{r Single Plots}
+summary(wqr$citric.acid)
+ggplot(aes(x=citric.acid), data = wqr)+geom_histogram() + 
+  scale_x_continuous(limits = c(0, 1.2), breaks = c(0, .15, .3, .45, .6,.75,.8,1,1.1))
+
+ggplot(aes(x=citric.acid), data = wqr)+geom_histogram(binwidth = .01,color = 'black', fill='blue') + 
+  scale_x_continuous(limits = c(0, .85), breaks = seq(0,.85,.03))
+
+wqr$cAcid.cut <- cut(wqr$citric.acid, breaks = c(-.001,.15,.30,.50,1.2))
+levels(wqr$cAcid.cut)
+
+with(wqr, cor.test(quality, as.numeric(cAcid.cut), method = 'pearson'))
+
+```
+Created the categorical variable *'cAcid.cut'* from citric.acid by looking at the histogram (which is relatively evenly distributed) and then maximizing the correlation. I feel that more categorical variables could help simply and visualize how each attribute may be attributing to the *'quality'* factor. Also, correlation increases with the new categorical variable.
+
+**Free and Total Sulfur Dioxide**
+```{r}
+#The readme gave hints as to the cutoffs to free total sulfur dioxide to a categorical variable. Perhaps cut total sulfur dioxide as well might affect taste since it's correlated with free sulfure dioxide
+ggplot(aes(x=total.sulfur.dioxide), data = wqr)+geom_histogram(binwidth = 1, color = 'black',fill='green')+xlim(0,100)
+
+#Chose the cutoff levels experimentally maximizing the correlation. Started with ~50 and 3 levels moved 4 and tweaked the 50 cutoff to 59
+wqr$total.sulf.dioxide.cut <- cut(wqr$total.sulfur.dioxide, breaks = c(0,59,109,300))
+levels(wqr$total.sulf.dioxide.cut)
+
+with(wqr, cor.test(quality, as.numeric(total.sulf.dioxide.cut), method = 'pearson'))
+
+
+ggplot(aes(x=free.sulfur.dioxide), data = wqr)+geom_histogram(binwidth = 1, color = 'black',fill='green')+xlim(0,100)
+summary(subset(wqr, wqr$free.sulfur.dioxide>=50))
+wqr$free.cut <- cut(wqr$free.sulfur.dioxide, breaks = c(0,10,20,30,40,50,100))
+
+with(wqr, cor.test(quality, as.numeric(free.cut), method = 'pearson'))
+
+ggplot(aes(y=quality, x=free.cut),data=wqr)+ geom_point(size=3,position='jitter',alpha=.5)
+```
+The readme hinted that there might be adverse tastes when free sulfur dioxide values becomes greater than 50ppm. There was an increase in correlation from the numerical version of *'free.sulfur.dioxide'* parameter to the categorical one, perhaps it will be useful in gaining insight to the quality parameter? I also turned *'total.sulfure.dioxide'* variable into a categorical variable (saw an increase in correlation with *'quality'*)
+
+**Chlorides and Density**
+```{r}
+#Chlorides and Density a closer look
+ggplot(aes(x=chlorides), data = wqr)+geom_histogram(binwidth = .001)+
+  scale_x_continuous(limits = c(0, .15), breaks = seq(0,.15,0.01))
+
+wqr$chloride.cut<- cut(wqr$chlorides, breaks = c(0,quantile(wqr$chlorides, 0.25), quantile(wqr$chlorides, 0.5),quantile(wqr$chlorides, 0.75), .7))
+
+levels(wqr$chloride.cut)
+with(wqr, cor.test(quality, as.numeric(chloride.cut), method = 'pearson'))
+
+```
+Both Density and chlorides have very normal distributions, and have reasonable correlations with quality. After resizing the x-axis, it seems that chlorides is a very normally distributed variable. Turning chloride into a categorical variable increased it's correlation with quality from -0.12 to -0.17. 
 
 ```{r}
-summary(cars)
+#Density very normally distributed
+
+#wqr$density.cut<- cut(wqr$density, breaks = c(0, quantile(wqr$density, 0.25),quantile(wqr$density, 0.5),quantile(wqr$density, 0.75),1.1))
+wqr$density.cut<- cut(wqr$density, breaks = c(0, quantile(wqr$density, 0.33),quantile(wqr$density, 0.66),1.1))
+levels(wqr$density.cut)
+
+with(wqr, cor.test(quality, as.numeric(density.cut), method = 'pearson'))
+
 ```
+Both new categorical variables show an increased correlation with quality. Does this mean if a regression model is made, the categorical inputs will yield a better model?
 
-You can also embed plots, for example:
 
-```{r, echo=FALSE}
-plot(cars)
+**Rabbit Hole Idea**
+```{r Down the Rabbit Hole only to find NOTHING}
+
+wqr$dcut<- cut(wqr$density, breaks = c(0, quantile(wqr$density, 1/12),quantile(wqr$density, 2/12),quantile(wqr$density, 3/12),quantile(wqr$density, 4/12),quantile(wqr$density, 5/12),quantile(wqr$density, 6/12),quantile(wqr$density, 7/12),quantile(wqr$density, 8/12),quantile(wqr$density, 9/12),quantile(wqr$density, 10/12),quantile(wqr$density, 11/12),quantile(wqr$density, 12/12)))
+levels(wqr$dcut)
+
+levels(wqr$dcut)<-c("1","2","3","4","5","6","6","5","4","3","2","1")
+
+with(wqr, cor.test(quality, as.numeric(dcut), method = 'pearson'))
 ```
+There was a thought that evenly distributed variables like density and pH despite the low correlation might have more to say. The idea is simple, "too high density, or pH or too low density or pH" will mostly likely produce 'bad' quality wines. As wine makers try to create 'good' wines they should all tend toward the middle of the distribution. By cutting the data into 12 equal parts and then combining the ends together towards the center, the new categorical variable might reveal better correlation with the *'quality'* factor. A slight drop in correlation was found :(.
 
-###2. Free Exploration
+```{r Down Down}
+ggplot(aes(x=density, y=quality, color=dcut), data=wqr)+geom_point(alpha = 1/2, position="jitter", size=3)
+
+ggplot(aes(x=density, y=quality), data=wqr)+geom_point(alpha = 1/2, position="jitter", size=3)
+
+ggplot(aes(x=dcut, y=quality), data=wqr)+geom_point(alpha = 1/2, position="jitter", size=3)
+```
+Plots do not reveal anything significant, although very colorful. Perhaps pH will reveal something.
+
+
+```{r Rabbit Hole Continued}
+
+wqr$pHcut<- cut(wqr$pH, breaks = c(0, quantile(wqr$pH, 1/12),quantile(wqr$pH, 2/12),quantile(wqr$pH, 3/12),quantile(wqr$pH, 4/12),quantile(wqr$pH, 5/12),quantile(wqr$pH, 6/12),quantile(wqr$pH, 7/12),quantile(wqr$pH, 8/12),quantile(wqr$pH, 9/12),quantile(wqr$pH, 10/12),quantile(wqr$pH, 11/12),quantile(wqr$pH, 12/12)))
+levels(wqr$pHcut)
+
+levels(wqr$pHcut)<-c("1","2","3","4","5","6","6","5","4","3","2","1")
+
+with(wqr, cor.test(quality, as.numeric(pHcut), method = 'pearson'))
+
+with(wqr, table(factor(quality), pHcut))
+
+with(subset(wqr, as.numeric(wqr$dcut)>=5), table(factor(quality), pHcut))
+
+```
+Not looking good with pH, maybe a combination of pH and density will reveal an unexpected correlation.
 
 ```{r}
-summary(cars)
+ggplot(aes(x=pH, y=quality, color=pHcut), data=wqr)+geom_point(alpha = 1/2, position="jitter", size=3)
+
+ggplot(aes(x=pHcut, y=quality, color=dcut), data=wqr)+geom_point(alpha = 1/2, position='jitter', size=3)+ggtitle("Despair Never Looked so... Colorful, But then I thought I Saw the Rabbit")+
+  scale_color_brewer(type = 'seq', palette = 'Blues',
+    guide = guide_legend(title = 'Density', reverse = F,
+    override.aes = list(alpha = 1, size = 1)))
+
+
+ggplot(aes(color=pHcut, y=quality, x=dcut), data=wqr)+geom_point(alpha = 1/2, position='jitter', size=3)+
+  ggtitle("Despair Never Looked so... Colorful PART 2")+
+  scale_color_brewer(type = 'seq', palette = 'Blues',
+    guide = guide_legend(title = 'pH', reverse = F,
+    override.aes = list(alpha = 1, size = 1)))
+
+```
+pH investigation deadend, though I still haven't given up that there might be something in the normally distributed data. Maybe Chlorides and residual sugar have some story to tell.
+
+```{r What is Left of my Soul}
+
+ggplot(aes(x=factor(quality), y = residual.sugar), data = wqr) + geom_boxplot()+ylim(0,4)
+
+ggplot(aes(x=factor(quality), y = chlorides), data = wqr) + geom_boxplot()+ylim(0,0.2)
+
+
+printVariance <- function(colname,data){
+  for (i in 3:8){
+    print(with(subset(get(data), get(data)$quality==i), var(get(colname))))
+  }
+}
+
+printVariance("residual.sugar",'wqr')
+printVariance("chlorides",'wqr')
+printVariance("pH",'wqr')
+printVariance("density",'wqr')
+
+summary(wqr$chlorides)
+```
+Can people actually taste .1 g/liter of chloride/salt? This might be a futile exercise. Looked at variances of several variables to see if there is a trend of increasing or decreasing variance. This could indicate that the tails of the distribution might contain correlation to one particular quality level once again the 'Too much and too little' theory.
+
+```{r Please Chlorides Please...}
+wqr$chlcut<- cut(wqr$chlorides, breaks = c(0, quantile(wqr$chlorides, 1/12),quantile(wqr$chlorides, 2/12),quantile(wqr$chlorides, 3/12),quantile(wqr$chlorides, 4/12),quantile(wqr$chlorides, 5/12),quantile(wqr$chlorides, 6/12),quantile(wqr$chlorides, 7/12),quantile(wqr$chlorides, 8/12),quantile(wqr$chlorides, 9/12),quantile(wqr$chlorides, 10/12),quantile(wqr$chlorides, 11/12),quantile(wqr$chlorides, 12/12)))
+levels(wqr$chlcut)
+
+levels(wqr$chlcut)<-c("1","2","3","4","5","6","6","5","4","3","2","1")
+
+
+ggplot(aes(x=chlorides, y=quality, color=chlcut), data=wqr)+geom_point(alpha = 1/2, position="jitter", size=3)
+
+ggplot(aes( y=quality, x=chlcut), data=wqr)+geom_point(alpha = 1/2, position='jitter', size=3)+
+  ggtitle("Despair Never Looked so... Colorful Why am I still doing this")+
+  scale_color_brewer(type = 'seq', palette = 'Blues',
+    guide = guide_legend(title = 'pH', reverse = F,
+    override.aes = list(alpha = 1, size = 1)))
+with(wqr, table(factor(quality), chlcut))
+
+```
+A search on the internet revealed that most likely the % of salt contained in these wines are not at levels that are able to be tasted by most humans. And once again, the 'folding' of the distribution has not revealed any new correlations.
+
+###3. Further Exploration some Multivariate
+
+**Alcohol**
+```{r Alcohol}
+
+#Visualization of the relationship between Alchohol content and Quality
+#p1 <- ggplot(aes(x=quality, y=alcohol), data = wqr) + geom_point(alpha=1/4, position='jitter', size = 2)+stat_summary(fun.y = median, geom = 'point', shape = 7, size = 10, color = 'red') + scale_y_continuous(trans = sqrt())
+ggplot(aes(x=quality, y=alcohol), data = wqr) + geom_point(alpha=1/4, position='jitter', size = 3)+stat_summary(fun.y = median, geom = 'point', shape = 7, size = 10, color = 'red') 
+
+```
+Alcohol vs quality (a little backwards in the axis but it seems more natural to place quality on the x for visualization purposes). Added the median to see the the possible linear relationship with quality.
+
+```{r Less is Better Maybe}
+wqr$qual.cut <- cut(wqr$quality, breaks = c(2,4,5,6,7,8))
+levels(wqr$qual.cut)
+
+ggplot(aes(x=qual.cut, y=alcohol, color = cAcid.cut), data = wqr) + 
+  scale_color_brewer(type = 'div',
+    guide = guide_legend(title = 'Citric Acid', reverse = T,
+    override.aes = list(alpha = 1, size = 1))) +
+  geom_point(alpha=1/2, position='jitter', size = 3) + stat_summary(fun.y = median, geom = 'point', shape = 7, size = 10, color = 'red')
+
+with(wqr, cor.test(as.numeric(qual.cut), alcohol, method = 'pearson'))
+```
+Created a new categorical variable out of *'quality'* called *'qual.cut'* by merging the bottom 2 categories in *'quality'*. Hope to make trends a bit clearer and provide a cleaner view of the bins.
+
+**Volatile Acidity**
+```{r Boom}
+#Better Visualize the relationship between Volatile Acidity and Quality
+ggplot(aes(x=factor(quality), y=volatile.acidity), data = wqr) +
+  geom_point(alpha=1/4, position='jitter', size = 2)+
+  geom_boxplot(alpha = .25)+
+  stat_summary(fun.y = median, geom = 'point', shape = 7, size = 6, color = 'red')
+
+#Facet on Citric Acid
+ggplot(aes(x=qual.cut, y=volatile.acidity, color = cAcid.cut), data = wqr) + 
+  scale_color_brewer(type = 'div',
+    guide = guide_legend(title = 'Citric Acid', reverse = T,
+    override.aes = list(alpha = 1, size = 1))) +
+  geom_point(alpha=1/2, position='jitter', size = 3) + stat_summary(fun.y = median, geom = 'point', shape = 7, size = 6, color = 'red')+
+  ylim(0, 1.2)
+
+#Volatile Acidity colored by Total Sulfure Dioxide categorical Variable
+ggplot(aes(x=qual.cut, y=volatile.acidity, color = total.sulf.dioxide.cut), data = wqr) + 
+  scale_color_brewer(type = 'seq', palette = 'YlGnBu',
+    guide = guide_legend(title = 'Total Sulfur Dioxide', reverse = F,
+    override.aes = list(alpha = 1, size = 1))) +
+  geom_point(alpha=.75, position='jitter', size = 3) + 
+  stat_summary(fun.y = median, geom = 'point', shape = 7, size = 6, color = 'red')+
+  ylim(0, 1.2)
+
+#with(wqr, cor.test(as.numeric(qual.cut), volatile.acidity, method = 'pearson'))
+
+```
+The negative correlation between Volatile Acidity and Citric Acid can be seen the above histogram. The higher the Volatile Acidity, the lower the Citric Acid metric. There seems to be a reasonably strong correlation shown between Total Sulfur Dioxide and quality.
+
+**Sulphates**
+```{r High Correlation}
+ggplot(aes(x=qual.cut, y=sulphates), data = wqr) + geom_point(alpha=1/4, position='jitter', size = 3)+stat_summary(fun.y = median, geom = 'point', shape = 7, size = 6, color = 'red')+coord_cartesian(ylim=c(.25,1))
+
+
+ggplot(aes(x=qual.cut, y = sulphates), data =wqr) + geom_boxplot() + coord_cartesian(ylim=c(.25,1)) + stat_summary(fun.y = mean, geom = 'point', shape = 9, size = 6, color = 'red')
+
+```
+Sulphates seem to be linearly correlated with quality as shown by the ggpairs correlation matrix this is a good variable add to a model.
+
+
+```{r Extra Sweet and Sour}
+#Fixed Acidity vs Sugar colored by quality
+ggplot(aes(x=log(residual.sugar), y = fixed.acidity, color=factor(quality)), data = wqr)+ geom_point(size = 3, alpha = .5)+
+  scale_color_brewer(type = 'seq', palette = 'Blues',
+    guide = guide_legend(title = 'Quality', reverse = F,
+    override.aes = list(alpha = 1, size = 3)))
+
 ```
 
+Feeling somewhat unsatisfied with the current findings and the lack of elements to account for the variance in the quality ratings (although quality ratings are subjective and discrete), I started reading about how wine is rated. There are many subjective measures in rating wines, but the one that makes the most sense is Appearance (Visual), Aroma(smell), *Taste*, and Aftertaste (finish). Perhaps it's best to see how good of a model we can obtain from the current inputs. 
 
-###3. Further Exploration
+#####Modeling the Data
+```{r lm model}
+m1 <- lm(I(quality) ~ alcohol, data = wqr)
+m2 <- update(m1, ~ . + sulphates)
+m3 <- update(m2, ~ . + volatile.acidity)
+m4 <- update(m3, ~ . + cAcid.cut)
+m5 <- update(m4, ~ . + total.sulf.dioxide.cut)
+m6 <- update(m5, ~ . + chloride.cut)
+m7 <- update(m6, ~ . + density.cut)
+m8 <- update(m7, ~ . + pH)
+m9 <- update(m8, ~ . + fixed.acidity)
+m10 <- update(m9, ~ . + residual.sugar)
+m11 <- update(m10, ~ . + free.sulfur.dioxide)
 
-```{r}
-summary(cars)
+mtable(m1, m2, m3, m4, m5, m6, m7, m8,m9,m10,m11)
+
 ```
+I decided to run a linear regression test to see how much of the variance in quality I can capture. The result is about 36% of the variance with all independent variables modeled. The same model was run with the original non-categorical variables, the resulting model was about 1-2% worse. There are several considerations:
 
+1.  *'quality'* is essentially a categorical variable and should not be treated as a continuous one even though it looks like one. 
+2. A linear model might not be the best model, perhaps a non-linear approach could yield better results
+3. Perhaps the data does not capture enough of the variance as there are other subjective measures that *wine experts* take into account when rating wines such has Appearance and Aroma
+
+```{r glm Model and Binomial Distribution Model for Quality}
+#Take into account that quality is a categorical variable and perform a generalized linear regression with probit
+m1 <- glm(factor(quality) ~ alcohol, family = binomial(link = "probit"), data = wqr)
+m2 <- update(m1, ~ . + sulphates)
+m3 <- update(m2, ~ . + volatile.acidity)
+m4 <- update(m3, ~ . + cAcid.cut)
+m5 <- update(m4, ~ . + total.sulf.dioxide.cut)
+m6 <- update(m5, ~ . + chloride.cut)
+m7 <- update(m6, ~ . + density.cut)
+m8 <- update(m7, ~ . + pH)
+m9 <- update(m8, ~ . + fixed.acidity)
+m10 <- update(m9, ~ . + residual.sugar)
+m11 <- update(m10, ~ . + free.sulfur.dioxide)
+
+mtable(m1, m2, m3, m4, m5, m6, m7, m8,m9,m10,m11)
+
+```
+The generalized linear model treating the dependent variable *'quality'* as a categorical variable yield a better model, at least in the R-squared value sense yielding a McFadden R-sq. of .481 which seems to indicate that the model is a good fit for the data (non-categorical stands at R-sq of .430). I still wonder if a non-linear approach might be able to model the data better.
+
+**Sulfur Dioxide and Sulphate Exploration**
+```{r Sulphates and More}
+
+ggplot(aes(x = free.sulfur.dioxide, y=total.sulfur.dioxide), data = wqr) + geom_point(alpha=1/2)+geom_smooth()+ylim(0,150)+xlim(0,60)
+
+ggplot(aes(x = free.sulfur.dioxide, y=total.sulfur.dioxide+sulphates), data = wqr) + geom_point(alpha=1/2)+geom_smooth()+ylim(0,150)+xlim(0,60)
+
+#grid.arrange(sul1,sul2,ncol=2)
+
+corFT <-with(wqr, cor.test(free.sulfur.dioxide,total.sulfur.dioxide))
+corFS <- with(wqr, cor.test(free.sulfur.dioxide,sulphates))
+corFTS <- with(wqr, cor.test(free.sulfur.dioxide,total.sulfur.dioxide+sulphates))
+corFT$estimate
+corFS$estimate
+corFTS$estimate
+               
+modFTS <- lm(free.sulfur.dioxide ~ total.sulfur.dioxide+sulphates+residual.sugar, data = wqr)
+mtable(modFTS)
+modFTS$coefficients
+
+wqr$sulfcomb <- 0.2119922*wqr$total.sulfur.dioxide+1.4209109*wqr$sulphates+5.0889418
+corFTSmod<- with(wqr, cor.test(free.sulfur.dioxide,sulfcomb))
+corFTSmod
+```
+Surprisingly, linear combination between *'sulphates'* and *'total.sulfur.dioxide'* did not improve correlation with *'free.sulfur.dioxide'*. Another deadend where hypothesis and testing yielded a negative result. Ready to move on at this point.
 
 ###4: Final Plots and Summary
 
-```{r}
-plot(cars)
+After the investigation of the data set and numerous dead ends, the two variables have seem to have the strongest affect on red wine quality are Volatile Acidity and Alcohol.
+
+#####Plot One
+```{r Plot One}
+ggplot(aes(y=sqrt(volatile.acidity), x=factor(quality) ), data = wqr)+
+  geom_point(aes(color=cAcid.cut), position='jitter', size = 4, alpha = .75)+
+  stat_summary(fun.y = mean, geom = 'point',size = 6, shape = 7,color = 'red')+
+  geom_boxplot(alpha = 0.25)+
+  scale_color_brewer(type = 'seq', palette = 'RdPu',
+    guide = guide_legend(title = 'Citric Acid', reverse = F,
+    override.aes = list(alpha = 1, size = 1)))+
+  ggtitle('Red Wine Quality vs Volatile Acidity Colored by Citric Acid')+
+  labs(x='Quality', y='Volatile Acidity')
+
 ```
+Volatile Acidity seems to be one of the primary contributors to quality, the boxplot aids to reveal the linear nature of this input variable to the dependent. An added observation/visualization is that citric acid is negative correlation of Citric Acid and Volatile Acidity.
 
-###5: Reflection
+#####Plot Two
+*Density and Triangles*
+```{r Plot Two}
+ggplot(aes(x=residual.sugar, y= density, color=cAcid.cut), data = wqr)+
+  geom_point(alpha=1/2, size =4)+
+  scale_color_brewer(type = 'seq', palette = 'YlGnBu',
+    guide = guide_legend(title = 'Citric Acid', reverse = F,
+    override.aes = list(alpha = 1, size = 1)))+
+  ggtitle('Red Wine Density vs Residual Sugar Colored by Citric Acid')+
+  labs(y='Density', x='Residual Sugar')
 
-Relections are what we see in mirrors.
-
-```{r}
-summary(cars)
 ```
+This density plot is intersting in the tailed shape. Most density plots displayed this general shape. When colored over citric acid split into 4 levels, one can see that citric acid is also correlated with density (the less citric acid means in general lower density). Quick sanity check: .36 positive correlation using cor.test. The triangular shape/tailed shape is most likely the tendency towards a particular density when residual sugar is the dominate influence. Such is the case for other density plots such as high amounts of residual sugar starts to dominate the density of the wine. 
+
+
+#####Plot Three
+```{r Plot Three}
+ggplot(aes(y=sqrt(alcohol), x=factor(quality) ), data = wqr)+
+  geom_point(position='jitter', size = 3, alpha = .5)+
+  stat_summary(fun.y = mean, geom = 'point',size = 6, shape = 7,color = 'red')+
+  geom_boxplot(alpha = 0.25)+
+  scale_color_brewer(type = 'seq', palette = 'Dark2',
+    guide = guide_legend(title = 'Free Sulfur Dioxide', reverse = F,
+    override.aes = list(alpha = 1, size = 3)))+
+  ggtitle('Red Wine Quality vs Alcohol with Colored Means')+
+  labs(x='Quality', y='Alcohol')
+
+```
+The final low hanging insight is that alcohol is linearly correlated with quality. It seems that at least for red wine, higher alcohol content means better quality score! 
+
+#####Bonus Plot?
+A tip from a friend lead me to the following investigation. Is there any bias in the observation number and the quality of the wine? Perhaps the experts were tired and observations with larger X could indicate scoring later in the process.
+```{r Bonus}
+
+ggplot(aes(y=X, x= factor(quality)), data=wqr)+
+  geom_point(size=3, alpha=0.5, position='jitter')+
+  geom_boxplot(alpha=0.25, fill = 'green')+
+  geom_hline(yintercept = 800, linetype = 2, color = 'red')+
+  ggtitle('Observations Vs Quality')+
+  labs(x='Observation Number "X"', y='Quality')
+  
+```
+Looking at the plot, it seems that aside from the exception of 3 quality wines, all other scoring seemed reasonably evenly distributed in terms of observations. The median tended towards the 800 mark as expected in a 1599 observation data set. One can reasonably assured that at least there was no bias introduced through the orderness of the observations if the original order was preserved. 
+
+
+###5: Reflections
+
+Exploring the Red Wine dataset has been somewhat frustrating. After coming from the lesson and the Diamonds and Facebook dataset where intuition paid off at least two times out of three, the red wine's data refused to give up anything that was not somewhat obvious. Working with a qualitative/unbalanced sampling of the output/dependent variable was somewhat challenging as well. I keep thinking that discarding the bottom 2 and the top levels of the quality factor would vastly improve correlations at the risk of making the modeling trivial and losing all meaning to the data. The variables that affect Red Wine Quality most are *'alcohol'*, *'volatile.acidity'* and *'sulphates'*. *'citric.acid'* though correlated reasonably high with quality has high correlatino with *'volatile.acidity'* and loses much of its impact on the linear modeling due to the relationship. For the future, perhaps a non-linear model could be implemented and tested. Certain variables that I had hoped would show better correlation through informed factoring did not perform as expected (*'free.sulfur.dioxide'*). Instead *'total.sulfur.dioxide'* gave better correlation after factoring. The exploration of the red wine dataset has surprisingly taken more time than I expected. R is truly a powerful data analysis tool.
+
+
 
 
