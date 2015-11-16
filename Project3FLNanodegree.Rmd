@@ -1,17 +1,24 @@
 ---
 title: "Project 3 Data Science NanoDegree "
 author: "Fang Lu"
-date: "11/4/2015"
+date: "11/16/2015"
 output: html_document
 
 ---
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, fig.width = 12, fig.height = 8)
+```
 
 
 ###1. Injestion and Familiarization of the Data
 
 This is an exploration of the tidy data set **wineQualityReds.csv** provided by Udacity Data Analyst Nanodegree for Project 3. This data set was chosen for the brevity of the observations in consideration for execution time of certain plots. Guiding question: "Which Variables affect Red Wine Quality?"
 
+
 ```{r, include=FALSE}
+#This block has been set so that the library loading does not show up in the
+#knit html
+#Make sure that one is working in the correct working directory
 #getwd()
 #setwd('C:/Fang Lu/Udacity/Data Science/EDA_Course_Materials/EDA_Course_Materials/Project3')
 #Read in Wine Quality Reds as wqr and run all necessary libraries
@@ -218,7 +225,7 @@ Both new categorical variables show an increased correlation with quality. Does 
 
 **Rabbit Hole Idea**  
 
-```{r Down the Rabbit Hole only to find NOTHING}
+```{r Down the Rabbit Hole only to find NOTHING, echo=TRUE}
 
 wqr$dcut<- cut(wqr$density,
   breaks = c(0, quantile(wqr$density, 1/12),quantile(wqr$density, 2/12),
@@ -235,11 +242,12 @@ levels(wqr$dcut)<-c("1","2","3","4","5","6","6","5","4","3","2","1")
 with(wqr, cor.test(quality, as.numeric(dcut), method = 'pearson'))
 ```
 
-There was a thought that evenly distributed variables like density and pH despite the low correlation might have more to say. The idea is simple, "too high density, or pH or too low density or pH" will mostly likely produce 'bad' quality wines. As wine makers try to create 'good' wines they should all tend toward the middle of the distribution. By cutting the data into 12 equal parts and then combining the ends together towards the center, the new categorical variable might reveal better correlation with the *'quality'* factor. A slight drop in correlation was found :(.  
+There was a thought that evenly distributed variables like density and pH despite the low correlation might have more to say. The idea is simple, "high density, or pH or low density or pH" will possibly produce 'bad' quality wines (extremes tend toward the negative outcome in other words). As wine makers try to create 'good' wines, the independent variables should have a tendency toward the middle of the distribution. By cutting the data into 12 equal parts and then combining the ends (high and low pairs) together, the new categorical variable might reveal better correlation with the *'quality'* factor. A slight drop in correlation was found :(.  
 
 ```{r Down Down}
 ggplot(aes(x=density, y=quality, color=dcut), data=wqr) + 
   geom_point(alpha = 1/2, position="jitter", size=3)
+
 
 ggplot(aes(x=density, y=quality), data=wqr) + 
   geom_point(alpha = 1/2, position="jitter", size=3)
@@ -248,10 +256,10 @@ ggplot(aes(x=dcut, y=quality), data=wqr) +
   geom_point(alpha = 1/2, position="jitter", size=3)
 ```
 
-Plots do not reveal anything significant, although very colorful. Perhaps pH will reveal something.  
+Something I was looking for in the plots were perhaps a higher number of low quality rankings associated category 1 of the dcut (which is the combination of the highest and lowest density after cutting the samples into 12 evenly populated segments). Plots do not reveal anything significant, although very colorful.  Perhaps pH will reveal something.  
 
 
-```{r Rabbit Hole Continued}
+```{r Rabbit Hole Continued, echo=TRUE}
 
 wqr$pHcut<- cut(wqr$pH, 
                 breaks = c(0, quantile(wqr$pH, 1/12),quantile(wqr$pH, 2/12),
@@ -272,7 +280,7 @@ with(subset(wqr, as.numeric(wqr$dcut)>=5), table(factor(quality), pHcut))
 
 ```
 
-Not looking good with pH, maybe a combination of pH and density will reveal an unexpected correlation.  
+Not looking good with pH, maybe a combination of pH and density will reveal an unexpected correlation. where the comination of pH and density may reveal some clustering of higher or lower quality  
 
 ```{r}
 ggplot(aes(x = pH, y = quality, color = pHcut), data = wqr) + 
@@ -282,13 +290,13 @@ ggplot(aes(x = pHcut, y = quality, color = dcut), data = wqr) +
   geom_point(alpha = 1/2, position = 'jitter', size = 3) + 
   ggtitle("Despair Never Looked so... Colorful, Oh Maybe that's the Rabbit") +
   scale_color_brewer(type = 'seq', palette = 'Blues',
-    guide = guide_legend(title = 'Density', reverse = F,
+    guide = guide_legend(title = 'Density (dcut)', reverse = F,
     override.aes = list(alpha = 1, size = 1)))
 
 
 ggplot(aes(color = pHcut, y = quality, x = dcut), data = wqr) + 
-  geom_point(alpha = 1/2, position = 'jitter', size = 3)+
-  ggtitle("Despair Never Looked so... Colorful PART 2")+
+  geom_point(alpha = 1/2, position = 'jitter', size = 3) +
+  ggtitle("Despair Never Looked so... Colorful PART 2") +
   scale_color_brewer(type = 'seq', palette = 'Blues',
     guide = guide_legend(title = 'pH', reverse = F,
     override.aes = list(alpha = 1, size = 1)))
@@ -320,9 +328,9 @@ printVariance("density",'wqr')
 summary(wqr$chlorides)
 ```
 
-Can people actually taste .1 g/liter of chloride/salt? This might be a futile exercise. Looked at variances of several variables to see if there is a trend of increasing or decreasing variance. This could indicate that the tails of the distribution might contain correlation to one particular quality level once again the 'Too much and too little' theory.  
+Can people actually taste .1 g/liter of chloride/salt? Note: our chloride and residual sugar measurements are in g/dm^3 which is the same as g/liter. This might be a futile exercise. Looked at variances of several variables to see if there is a trend of increasing or decreasing variance. This could indicate that the tails of the distribution might contain correlation to one particular quality level once again the 'Too much or too little yields bad quality' theory.  
 
-```{r Please Chlorides Please...}
+```{r Please Chlorides Please..., echo=TRUE}
 wqr$chlcut<- cut(wqr$chlorides, 
   breaks = c(0, quantile(wqr$chlorides, 1/12),quantile(wqr$chlorides, 2/12),
              quantile(wqr$chlorides, 3/12),quantile(wqr$chlorides, 4/12),
@@ -334,13 +342,14 @@ levels(wqr$chlcut)
 
 levels(wqr$chlcut)<-c("1","2","3","4","5","6","6","5","4","3","2","1")
 
+summary(wqr$chlorides, 10)
 
 ggplot(aes(x=chlorides, y=quality, color=chlcut), data=wqr) + 
   geom_point(alpha = 1/2, position="jitter", size=3)
 
 ggplot(aes( y=quality, x=chlcut), data=wqr) + 
-  geom_point(alpha = 1/2, position='jitter', size=3)+
-  ggtitle("Despair Never Looked so... Colorful Why am I still doing this")+
+  geom_point(alpha = 1/2, position='jitter', size=3) +
+  ggtitle("Despair Never Looked so... Colorful Why am I still doing this") +
   scale_color_brewer(type = 'seq', palette = 'Blues',
     guide = guide_legend(title = 'pH', reverse = F,
     override.aes = list(alpha = 1, size = 1)))
@@ -348,7 +357,7 @@ with(wqr, table(factor(quality), chlcut))
 
 ```
 
-A search on the internet revealed that most likely the % of salt contained in these wines are not at levels that are able to be tasted by most humans. And once again, the 'folding' of the distribution has not revealed any new correlations.
+The wikipedia article on "Taste" revealed that the average human detection threshold for sucrose is 10 millimoles per liter which actually translates to .01g/liter. Further searching has some studies showing that salt detection threshold is around .5 mols/liter which translates to .5 grams/liter. Most likely the difference of salts contained in these wines are not at levels that are able to be readily distinguished by humans with a range of (.012-.611 g/liter). The differences in sugar should be able to be detected however. But once again, the 'folding' of the distribution has not revealed any new correlations.
 
 ###3. Further Exploration some Multivariate
 
@@ -384,6 +393,7 @@ with(wqr, cor.test(as.numeric(qual.cut), alcohol, method = 'pearson'))
 Created a new categorical variable out of *'quality'* called *'qual.cut'* by merging the bottom 2 categories in *'quality'*. Hope to make trends a bit clearer and provide a cleaner view of the bins.
 
 **Volatile Acidity**
+ 
 ```{r Boom}
 #Better Visualize the relationship between Volatile Acidity and Quality
 ggplot(aes(x=factor(quality), y=volatile.acidity), data = wqr) +
@@ -416,7 +426,8 @@ ggplot(aes(x=qual.cut, y=volatile.acidity, color = total.sulf.dioxide.cut),
  
 The negative correlation between Volatile Acidity and Citric Acid can be seen the above histogram. The higher the Volatile Acidity, the lower the Citric Acid metric. There seems to be a reasonably strong correlation shown between Total Sulfur Dioxide and quality.
 
-**Sulphates**
+**Sulphates** 
+
 ```{r High Correlation}
 ggplot(aes(x=qual.cut, y=sulphates), data = wqr) + 
   geom_point(alpha=1/4, position='jitter', size = 3) +
@@ -492,6 +503,7 @@ mtable(m1, m2, m3, m4, m5, m6, m7, m8,m9,m10,m11)
 The generalized linear model treating the dependent variable *'quality'* as a categorical variable yield a better model, at least in the R-squared value sense yielding a McFadden R-sq. of .481 which seems to indicate that the model is a good fit for the data (non-categorical stands at R-sq of .430). I still wonder if a non-linear approach might be able to model the data more effectively.
 
 **Sulfur Dioxide and Sulphate Exploration**
+
 ```{r Sulphates and More}
 
 ggplot(aes(x = free.sulfur.dioxide, y=total.sulfur.dioxide), data = wqr) + 
@@ -522,6 +534,26 @@ corFTSmod
 ```
 
 Surprisingly, linear combination between *'sulphates'* and *'total.sulfur.dioxide'* did not improve correlation with *'free.sulfur.dioxide'*. Another dead-end where hypothesis and testing yielded a negative result. Ready to move on at this point.
+
+
+**Bonus Obvervations 'X'**
+
+A tip from a friend lead me to the following investigation. Is there any bias in the observation number and the quality of the wine? Perhaps the experts were tired and observations with larger X could indicate scoring later in the process assuming a preservation of the order.
+```{r Observation}
+#Create a factored version of the observations
+wqr$x.cut<- cut(wqr$X, breaks = c(0,200,400,600,800,1000,1200,1400,1600))
+
+ggplot(aes(y = X, x = factor(quality)), data = wqr) +
+  geom_point(size = 3, alpha = 0.5, position = 'jitter') +
+  geom_boxplot(alpha=0.25, fill = 'green')+
+  geom_hline(yintercept = 800, linetype = 2, color = 'red') +
+  ggtitle('Observations Vs Quality') +
+  labs(y='Observation Number "X"', x='Quality')
+  
+```
+
+Looking at the plot, it seems that aside from the exception of wines with *quality* 3, all other scoring seemed evenly distributed in terms of observations. The median tended towards the 800 mark as expected in a 1599 observation data set. One can be reasonably assured that at least there was no bias introduced through the ordering of the observations if the original order was preserved. 
+
 
 **Principal Component Analysis**
 ```{r PCA}
@@ -580,20 +612,46 @@ pcaRotation = as.data.frame(pcaRotation)
 rotNames <- cbind(Row.Names = rownames(pcaRotation), pcaRotation)
 tidyPCA <-  tidyr::gather(rotNames, 'PC','Weights', 2:12)
 tidyPCA$PCs = tidyPCA$variable
+tidyPCAp2 <- 
+  rbind(subset(tidyPCA, variable == 'PC1'), subset(tidyPCA, variable == 'PC2'), 
+        subset(tidyPCA, variable == 'PC3'), subset(tidyPCA, variable == 'PC4'))
 
 #graphical representation of the principal Component weights
 ggplot(aes(x = Row.Names, y = value, color = PCs, group = PCs), 
              data = tidyPCA) + 
   geom_point() + geom_line(size = 1, alpha = .7, linetype = 2) + 
   labs(x='Features', y='PC Weights') + 
-  ggtitle('Principal Component Weights Breakdown by PCs')
+  ggtitle('Principal Component Weights Breakdown by PCs') +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1), 
+        legend.text = element_text(size = 8))
 
 pcaSum <- summary(redwine.pca)
 
 
 ```
 
-The graphical representation of the results of the principal component analysis can allow for a quick overview of the top contributors to individual principal components as well as the proportions of and cumulative variance. The dotted lines for the *PC Weights Breakdown* graph makes it easier to trace the line.
+The graphical representation of the results of the principal component analysis can allow for a quick overview of the top contributors to individual principal components as well as the proportions of and cumulative variance. The dotted lines for the *PC Weights Breakdown* graph makes it easier to trace the line. 
+
+```{r}
+#graphical representation of the principal Component weights
+ggplot(aes(x = Row.Names, y = value, fill = PCs, group = PCs), 
+             data = tidyPCA) + 
+  geom_bar(stat='identity', position='dodge') + 
+  labs(x='Features', y='PC Weights') + 
+  ggtitle('Principal Component Weights Breakdown by PCs') +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1), 
+        legend.text = element_text(size = 8))
+
+ggplot(aes(x = Row.Names, y = value, fill = PCs, group = PCs), 
+             data = tidyPCAp2) + 
+  geom_bar(stat='identity', position='dodge') + 
+  labs(x='Features', y='PC Weights') + 
+  ggtitle('Principal Component Weights Breakdown by PCs') +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1), 
+        legend.text = element_text(size = 8))
+```
+
+Line graphs tend to suggest a trending which is not the case with PCA weights, the bar graph is perhaps a more apt graph. I chose the line graph previously because I felt it show the information with more clarity, but perhaps displaying 12 PCs together is too cluttered and not altogether useful. A set of the most important PCs with their weight distributions are probably more useful.
 
 ###4: Final Plots and Summary
 
@@ -606,22 +664,24 @@ ggplot(aes(y = sqrt(volatile.acidity), x = factor(quality) ), data = wqr) +
   stat_summary(fun.y = mean, geom = 'point',size = 6, shape = 7,color = 'red') +
   geom_boxplot(alpha = 0.25)+
   scale_color_brewer(type = 'seq', palette = 'RdPu',
-    guide = guide_legend(title = 'Citric Acid', reverse = F,
+    guide = guide_legend(title = 'Citric Acid (g/dm^3)', reverse = F,
     override.aes = list(alpha = 1, size = 1)))+
   ggtitle('Red Wine Quality vs Volatile Acidity Colored by Citric Acid')+
-  labs(x='Quality', y='Volatile Acidity')
+  labs(x='Quality (1-10)', y='Volatile Acidity (acetic acid - g/dm^3)')
 
 ```
 ------ 
-Volatile Acidity seems to be one of the primary contributors to quality, the box plot aids to reveal the linear nature of this input variable to the dependent. An added observation/visualization is that citric acid is negative correlation of Citric Acid and Volatile Acidity.
+*Volatile Acidity* seems to be one of the primary contributors to quality, the box plot aids to reveal the linear nature of this input variable to the dependent. An added observation/visualization is that *Citric Acid* is negatively correlated with *Volatile Acidity*.
 
 ####Plot Two
 *Principal Component Analysis*
-```{r Plot Two}
+```{r Plot Two, fig.height = 12}
+
+
 p1 <- ggplot(aes(x = Row.Names, y = Proportion.of.Variance, 
                  fill = Row.Names, group = Proportion.of.Variance), 
              data = tvarProp) + geom_bar(stat='identity') +
-  labs(x='Principal Components', y='Proportion of Var') + 
+  labs(x='Principal Components', y='Proportion of Variance') + 
   ggtitle('PCA Variance Proportions') +
   theme(axis.text.x = element_text(angle = 25, hjust = 1)) +
   scale_y_continuous(limits = c(0, 0.3)) + 
@@ -630,58 +690,45 @@ p1 <- ggplot(aes(x = Row.Names, y = Proportion.of.Variance,
 
 p2 <- ggplot(aes(x = Row.Names, y = Cumulative.Variance), 
              data = tvarProp) + geom_bar(stat='identity') +
-  labs(x='Principal Components', y = 'Cumulative Var') + 
+  labs(x='Principal Components', y = 'Cumulative Variance') + 
   ggtitle('PCA Cumulative Variance') +
   theme(axis.text.x = element_text(angle = 25, hjust = 1))
 
 
-p3 <- ggplot(aes(x = Row.Names, y = value, color = PCs, group = PCs), 
-             data = tidyPCA) + 
-  geom_point() + geom_line(size = 1, alpha = .7, linetype = 2) + 
+p3 <- ggplot(aes(x = Row.Names, y = value, fill = PCs, group = PCs), 
+             data = tidyPCAp2) + 
+  #geom_point() + geom_line(size = 1, alpha = .7, linetype = 2) + 
+  geom_bar(stat='identity', position = 'dodge') +
   labs(x='Features', y='PC Weights') + 
-  ggtitle('Principal Components Weight Breakdown by PCs') +
+  ggtitle('Principal Components Weight Breakdown of First Four PCs') +
   theme(axis.text.x = element_text(angle = 20, hjust = 1), 
         legend.text = element_text(size = 8)) +
-  scale_color_brewer(type = 'seq', palette = 'Spectral',
-    guide = guide_legend(title = 'PCs', reverse = F,
+  scale_fill_manual(values=c("#9e0142", "#d53e4f", "#f46d43","#fdae61"),
+                     guide = guide_legend(title = 'Citric Acid', reverse = F,
     override.aes = list(alpha = 1, size = 3)))
 
 grid.arrange(arrangeGrob(p1,p2, ncol=2), p3, ncol = 1, heights = c(1,1.5))
 ```
------- 
+
 The graphical representation of the principal component analysis (PCA) helps to quickly visualize the distribution of the total variance in the data set. The bar graph showing the variance proportions for each PC and the color coordinated line graph showing the relative contributions of each variable to the respective PCs can give a quick way to find hidden relationships. The main relationships are acidity, sulfur dioxide, and alcohol corresponding to PC1, PC2 and PC3. It takes nine principal components to capture more than 95% of the total variance.
 
 
 ####Plot Three
 ```{r Plot Three}
-ggplot(aes(y = sqrt(alcohol), x = factor(quality) ), data = wqr)+
-  geom_point(position = 'jitter', size = 3, alpha = .5)+
+ggplot(aes(y = sqrt(alcohol), x = factor(quality)), data = wqr)+
+  geom_point(aes(color = x.cut ),position = 'jitter', size = 3, alpha = .5)+
   stat_summary(fun.y = mean, geom = 'point',size = 6, shape = 7,color = 'red') +
   geom_boxplot(alpha = 0.25)+
-  scale_color_brewer(type = 'seq', palette = 'Dark2',
-    guide = guide_legend(title = 'Free Sulfur Dioxide', reverse = F,
+  scale_color_brewer(type = 'seq', palette = 'Greens',
+    guide = guide_legend(title = 'Observation Number "X"', reverse = F,
     override.aes = list(alpha = 1, size = 3)))+
   ggtitle('Red Wine Quality vs Alcohol with Colored Means')+
-  labs(x='Quality', y='Alcohol')
+  labs(x='Quality (1-10)', y='Alcohol (% by volume)')
 
 ```
 ------ 
-The final low hanging insight is that alcohol is linearly correlated with quality and should be a significant contributor if one was to build a predictive model around the given variables and red wine quality. It seems that at least for red wine, higher alcohol content means better quality score! 
+The final low hanging insight is that *alcohol* is linearly correlated with quality and should be a significant contributor if one was to build a predictive model around the given variables and red wine quality. It seems that at least for red wine, higher alcohol content means better quality score! The chart is also colored by the observation number *'X'* to demonstrate that there is no bias in the inherent ordering of the observations (as in observations numbered 1-200 do not have a tendency to have higher quality ratings than observations 1400-1600).
 
-####Bonus Plot?
-A tip from a friend lead me to the following investigation. Is there any bias in the observation number and the quality of the wine? Perhaps the experts were tired and observations with larger X could indicate scoring later in the process.
-```{r Bonus}
-
-ggplot(aes(y = X, x = factor(quality)), data = wqr) +
-  geom_point(size = 3, alpha = 0.5, position = 'jitter') +
-  geom_boxplot(alpha=0.25, fill = 'green')+
-  geom_hline(yintercept = 800, linetype = 2, color = 'red') +
-  ggtitle('Observations Vs Quality') +
-  labs(y='Observation Number "X"', x='Quality')
-  
-```
------- 
-Looking at the plot, it seems that aside from the exception of 3 quality wines, all other scoring seemed reasonably evenly distributed in terms of observations. The median tended towards the 800 mark as expected in a 1599 observation data set. One can reasonably assured that at least there was no bias introduced through the ordering of the observations if the original order was preserved. 
 
 
 ###5: Reflections
